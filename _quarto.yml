@@ -1,0 +1,20 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: "Speech Values Dashboard"
+  navbar:
+    left:
+      - text: "Overview"
+        href: index.qmd
+      - text: "MDS Map"
+        href: index.qmd
+      - text: "President Detail"
+        href: index.qmd
+
+format:
+  html:
+    theme: flatly
+    toc: true
+    page-layout: full
