@@ -1,0 +1,252 @@
+---
+title: "Speech Values Dashboard"
+format:
+  html:
+    theme: flatly
+    toc: true
+    page-layout: full
+    code-fold: true
+---
+
+# Overview {#overview}
+
+This page provides a high-level overview of the dataset and key indicators.
+
+```{r}
+#| echo: false
+#| message: false
+library(tidyverse)
+library(here)
+library(knitr)
+library(grid)
+library(patchwork)
+
+# script fill import and format dataset
+source(here("src", "format_data.R"))
+
+# images paths for presidents
+img_files <- list.files("images/presidents", full.names = TRUE)
+
+# create a lookup table from image paths
+img_lookup <- tibble(
+  filename = basename(img_files),
+  pres_key = tools::file_path_sans_ext(filename),
+  path = img_files) |> 
+  mutate(pres_key = pres_key |> str_to_lower())
+
+# merge into main df
+df <- df %>%
+  mutate(
+    pres_key = president %>%
+      str_to_lower() %>%
+      str_replace_all("[^a-z]", "_") %>%  
+      str_replace_all("_+", "_") %>%
+      str_replace_all("^_|_$", "")) %>%
+  left_join(img_lookup, by = "pres_key") %>%
+  rename(president_img = path) 
+```
+
+
+```{r}
+plot_df <- df %>%
+  group_by(president_party, value) |>
+  summarise(
+    mean_rating = mean(rating, na.rm = TRUE), 
+    sd_rating   = sd(rating, na.rm = TRUE),
+    n           = sum(!is.na(rating)),
+    .groups = "drop") |>
+  mutate(
+    se_rating = sd_rating / sqrt(n),
+    ci_lower  = mean_rating - 1.96 * se_rating,
+    ci_upper  = mean_rating + 1.96 * se_rating)
+
+
+# establish order based on Republican party averages
+order_levels <- plot_df %>%
+  filter(president_party == "Republican") %>%
+  arrange(mean_rating) %>%
+  pull(value)
+
+  
+plot_df |>
+  mutate(value = factor(value, levels = order_levels)) %>%
+  ggplot(aes(x = value, y = mean_rating, fill = president_party)) +
+  geom_col() +
+  facet_wrap(~president_party) +
+  
+  scale_fill_manual(
+    values = c(
+      "Democratic" = "#3182BD",
+      "Republican" = "#DE2D26")) +
+  
+  scale_y_continuous(limits = c(0, 7)) +
+  
+  geom_errorbar(
+    aes(ymin = ci_lower, ymax = ci_upper),
+    width = 0.2,
+    position = position_dodge(width = 0.9)) +
+  
+  geom_text(
+    aes(label = round(mean_rating, 2)),
+    position = position_stack(vjust = 0.85),
+    color = "white",
+    size = 3) +
+
+  theme_minimal() +
+  theme(legend.position = "none", 
+        plot.title = element_text(hjust = 0.5)) +
+  
+  coord_flip() +
+  
+  labs(
+    title = "Party Average Value Ratings with 95% Confidence Intervals",
+    x = NULL,  
+    y = "Mean Rating (1–7 Likert Scale)")
+```
+
+
+
+
+
+
+
+# MDS Map {#mds-map}
+
+This page will show a 2D map of presidents, based on their average value ratings.
+
+
+```{r}
+#| echo: false
+plot(1, 1, main = "MDS plot placeholder")
+```
+
+
+# President Detail {#president-detail}
+
+This page will provide detailed plots for individual presidents.
+
+```{r}
+plot_president <- function(df, pres_name) {
+  
+  # compute mean ratings for president
+  pres_means <- df |>
+    filter(president == pres_name) %>%
+    group_by(participant_party, value) %>%
+    summarise(
+      mean_rating = mean(rating, na.rm = TRUE),
+      sd_rating   = sd(rating, na.rm = TRUE),
+      n           = sum(!is.na(rating)),
+      .groups = "drop") |>
+    mutate(
+      se_rating = sd_rating / sqrt(n),
+      ci_lower  = mean_rating - 1.96 * se_rating,
+      ci_upper  = mean_rating + 1.96 * se_rating,
+      value     = factor(value, levels = order_levels), 
+      participant_party = factor(participant_party,
+        levels = c("Liberal", "Moderate", "Conservative")))
+
+  
+  # order factors based on existing plot order
+  pres_means <- pres_means %>%
+    mutate(value = factor(value, levels = order_levels))
+  
+  # plot
+  ggplot(pres_means, aes(x = value, y = mean_rating, fill = participant_party)) +
+    
+  geom_col() +
+    
+  scale_fill_manual(values = c(
+    "Conservative" = "#DE2D26", 
+    "Moderate"     = "#636363", 
+    "Liberal"      = "#3182BD")) +
+  
+  facet_wrap(~participant_party) +
+      
+  geom_text(
+    aes(label = round(mean_rating, 2)),
+    position = position_stack(vjust = 0.65),
+    color = "white",
+    size = 3) +
+  
+  geom_errorbar(
+      aes(ymin = ci_lower, 
+          ymax = ci_upper),
+      width = 0.2) +
+  
+    coord_flip() +
+    theme_minimal() +
+    
+    labs(
+      title = paste0(pres_name, " — Average Value Rating by Participant Leaning"),
+      x = NULL,
+      y = "Mean Rating (1–7 Likert Scale)") +
+    
+    ylim(0, 7) +  
+    
+    theme(
+      legend.position = "none", 
+      plot.title = element_text(hjust = 0.5))
+}
+
+plot_president(df, "Franklin D. Roosevelt")
+```
+
+```{r}
+#| echo: false
+#| message: false
+show_president <- function(df, pres_name) {
+  
+  # 1. Get president
+  pres_path <- df %>%
+    filter(president == pres_name) %>%
+    pull(president_img) %>%
+    unique()
+  
+  # 2. Create plots from images
+  pres_img <- ggplot() + 
+
+    annotation_custom(grid::rectGrob(gp = gpar(fill = "white", col = NA))) +
+    annotation_custom(
+      grid::rasterGrob(jpeg::readJPEG(pres_path)),
+      xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf)
+  
+  return(pres_img)
+}
+```
+
+```{r}
+#| echo: false
+#| message: false
+show_logo_png <- function(df, pres_name) {
+  # 1. Look up the president's party
+  party <- df %>%
+    filter(president == pres_name) %>%
+    pull(president_party) %>%
+    unique()
+  
+  # 2. Path to logo (e.g. "images/logos/Democratic.png")
+  logo_path <- file.path("images/logos", paste0(party, ".png"))
+  
+  if (!file.exists(logo_path)) stop("Logo not found: ", logo_path)
+  
+  # 3. Plot logo with white background
+  ggplot() +
+    annotation_custom(grid::rectGrob(gp = grid::gpar(fill = "white", col = NA))) +
+    annotation_custom(
+      grid::rasterGrob(png::readPNG(logo_path), interpolate = TRUE),
+      xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf
+    ) +
+    theme_void() +
+    labs(title = paste0(party, " Party")) +
+    theme(plot.title = element_text(hjust = 0.5))
+}
+```
+```{r}
+#| echo: false
+#| message: false
+pres_plot <- show_president(df, "Franklin D. Roosevelt")
+logo_plot <- show_logo_png(df, "Franklin D. Roosevelt")
+
+(pres_plot | logo_plot)
+```
+
