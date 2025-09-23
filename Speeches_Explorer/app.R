@@ -5,6 +5,8 @@ library(grid)
 library(patchwork)
 library(ggrepel)
 
+# load and process data
+
 source(here("src", "format_data.R"))
 
 # images paths for presidents
@@ -35,6 +37,8 @@ df <- df %>%
 
 rm(img_files, img_lookup)
 
+
+
 ui <- fluidPage(
 
   
@@ -42,15 +46,22 @@ ui <- fluidPage(
     
     # Sidebar: portrait, logo, selector
     sidebarPanel(
-      selectInput("pres_choice", "Choose a President:", choices = unique(df$president)),
+      selectInput("pres_choice", "Choose a President:", choices = sort(unique(df$president))),
       br(),
       uiOutput("president_img"),
+      tags$div(
+        style = "text-align:center; font-size: 11px; color: grey; margin-top: 5px;",
+        "Portrait and Party Logo from Wikimedia Commons", "(CC-BY-SA/Public Domain)", tags$br(), 
+        "Code licensed under the GNU GPL v3. ", tags$br(), 
+        "Data from an academic study by Andrew M. Demetriou, licensed under ",
+        tags$a(href="https://creativecommons.org/licenses/by/4.0/", "CC-BY 4.0")
+      ),
       uiOutput("party_logo")
     ),
     
     # Main content
     mainPanel(
-      h3("Ratings by Participant Political Leaning"),
+      h3("Average Rating by Political Leaning"),
       plotOutput("president_plot"),
       hr(),
       h3("Overall Results"),
@@ -58,7 +69,8 @@ ui <- fluidPage(
         column(6, plotOutput("overview_plot")),
         column(6, plotOutput("mds_plot")))
       )
-))
+    )
+)
 
 server <- function(input, output, session) {
   
@@ -90,7 +102,7 @@ server <- function(input, output, session) {
   
   # Dynamic: faceted bar plot by participant leaning
   output$president_plot <- renderPlot({
-    plot_president(df, input$pres_choice)  # <- your function
+    plot_president(df, input$pres_choice)  
   })
   
   plot_df <- df %>%
@@ -144,7 +156,7 @@ server <- function(input, output, session) {
     coord_flip() +
     
     labs(
-      title = "Party Average Value Ratings with 95% Confidence Intervals",
+      title = "Party Average by Value \n with 95% Confidence Interval",
       x = NULL,  
       y = "Mean Rating (1–7 Likert Scale)")
   
@@ -185,7 +197,7 @@ server <- function(input, output, session) {
           plot.title = element_text(hjust = 0.5)) +
     
     labs(
-      title = "MDS of Presidents by Value Profiles",
+      title = "Multidimensional Scaling Map of \nPresidents' Value Profile \nby Euclidean Distance",
       x = "",
       y = "",
       color = "President's Party"
@@ -193,7 +205,7 @@ server <- function(input, output, session) {
   
   # Static: MDS plot
   output$mds_plot <- renderPlot({
-    mds_plot  # <- object defined earlier
+    mds_plot  
   })
 }
 
