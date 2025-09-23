@@ -99,12 +99,76 @@ server <- function(input, output, session) {
       ))
   })
   
-  
   # Dynamic: faceted bar plot by participant leaning
+  
+  plot_president <- function(df, pres_name) {
+    
+    # compute mean ratings for president
+    pres_means <- df |>
+      filter(president == pres_name) %>%
+      group_by(participant_party, value) %>%
+      summarise(
+        mean_rating = mean(rating, na.rm = TRUE),
+        sd_rating   = sd(rating, na.rm = TRUE),
+        n           = sum(!is.na(rating)),
+        .groups = "drop") |>
+      mutate(
+        se_rating = sd_rating / sqrt(n),
+        ci_lower  = mean_rating - 1.96 * se_rating,
+        ci_upper  = mean_rating + 1.96 * se_rating,
+        value     = factor(value, levels = order_levels), 
+        participant_party = factor(participant_party,
+                                   levels = c("Liberal", "Moderate", "Conservative")))
+    
+    
+    # order factors based on existing plot order
+    pres_means <- pres_means %>%
+      mutate(value = factor(value, levels = order_levels))
+    
+    # plot
+    ggplot(pres_means, aes(x = value, y = mean_rating, fill = participant_party)) +
+      
+      geom_col() +
+      
+      scale_fill_manual(values = c(
+        "Conservative" = "#DE2D26", 
+        "Moderate"     = "#636363", 
+        "Liberal"      = "#3182BD")) +
+      
+      facet_wrap(~participant_party) +
+      
+      geom_text(
+        aes(label = round(mean_rating, 2)),
+        position = position_stack(vjust = 0.65),
+        color = "white",
+        size = 3) +
+      
+      geom_errorbar(
+        aes(ymin = ci_lower, 
+            ymax = ci_upper),
+        width = 0.2) +
+      
+      coord_flip() +
+      theme_minimal() +
+      
+      labs(
+        title = paste0(pres_name, " — Average Value Rating by Participant Leaning"),
+        x = NULL,
+        y = "Mean Rating (1–7 Likert Scale)") +
+      
+      ylim(0, 7) +  
+      
+      theme(
+        legend.position = "none", 
+        plot.title = element_text(hjust = 0.5))
+  }
+  
   output$president_plot <- renderPlot({
     plot_president(df, input$pres_choice)  
   })
   
+  
+  # Static Overview Bar Plot
   plot_df <- df %>%
     group_by(president_party, value) |>
     summarise(
@@ -160,10 +224,11 @@ server <- function(input, output, session) {
       x = NULL,  
       y = "Mean Rating (1–7 Likert Scale)")
   
-  # Static: overview plot
   output$overview_plot <- renderPlot({
-    overview_plot  # <- object defined earlier
+    overview_plot 
   })
+  
+  
   
   president_profiles <- df %>%
     group_by(president, value) %>%
@@ -206,7 +271,7 @@ server <- function(input, output, session) {
   # Static: MDS plot
   output$mds_plot <- renderPlot({
     mds_plot  
-  })
+  }, res = 100)
 }
 
 shinyApp(ui, server)
