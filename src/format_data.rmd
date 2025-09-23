@@ -24,11 +24,17 @@ speech_df <- readRDS(here("_data", "_primary_data", "speech_df.RDS")) |>
 
 participant_df <- readRDS(here("_data", "_participant_scores", "wave_2", "wave_2_dfs.RDS")) |> 
   bind_rows() |> 
+  
+  # remove attention check rows
   filter(! item_ID == "attention") |>
+  
+  # select relevant variables
   select(item_ID, participant_ID, all_of(values), 
          c, w, Ethnicity, `Political spectrum (us)`) |>
+  
   rename(confidence = c, percieved_party = w, 
          participant_party = `Political spectrum (us)`) |>
+  
   mutate(confidence = factor(confidence, 
      levels = c(
         "Completely Unconfident",

@@ -20,6 +20,7 @@ library(here)
 library(knitr)
 library(grid)
 library(patchwork)
+library(ggrepel)
 
 # script fill import and format dataset
 source(here("src", "format_data.R"))
@@ -44,6 +45,8 @@ df <- df %>%
       str_replace_all("^_|_$", "")) %>%
   left_join(img_lookup, by = "pres_key") %>%
   rename(president_img = path) 
+
+rm(img_files, img_lookup)
 ```
 
 
@@ -105,21 +108,47 @@ plot_df |>
 ```
 
 
-
-
-
-
-
-# MDS Map {#mds-map}
-
-This page will show a 2D map of presidents, based on their average value ratings.
-
-
 ```{r}
-#| echo: false
-plot(1, 1, main = "MDS plot placeholder")
-```
+president_profiles <- df %>%
+  group_by(president, value) %>%
+  summarise(mean_rating = mean(rating, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = value, values_from = mean_rating)
 
+value_matrix <- president_profiles %>% select(-president) %>% as.matrix()
+rownames(value_matrix) <- president_profiles$president
+dist_matrix <- dist(value_matrix, method = "euclidean")
+
+mds_fit <- cmdscale(dist_matrix, k = 2)   
+mds_coords <- as.data.frame(mds_fit) %>%
+  rownames_to_column("president") %>%
+  left_join(df %>% select(president, president_party) %>% distinct(), by = "president")
+
+
+# Step 5: Scatterplot with party colors
+ggplot(mds_coords, aes(x = V1, y = V2, label = president, color = president_party)) +
+  geom_point(size = 3) +
+  geom_text_repel(aes(label = president), size = 3, max.overlaps = 20) +
+  
+  scale_color_manual(
+    values = c(
+      "Democratic" = "#3182BD",
+      "Republican" = "#DE2D26")) +
+  
+  scale_x_continuous(limits = c(-2, 2)) + 
+  scale_y_continuous(limits = c(-1, 1)) + 
+  
+  theme_void() +
+  
+  theme(legend.position = "none", 
+        plot.title = element_text(hjust = 0.5)) +
+  
+  labs(
+    title = "MDS of Presidents by Value Profiles",
+    x = "",
+    y = "",
+    color = "President's Party"
+  )
+```
 
 # President Detail {#president-detail}
 
@@ -241,11 +270,20 @@ show_logo_png <- function(df, pres_name) {
     theme(plot.title = element_text(hjust = 0.5))
 }
 ```
+
 ```{r}
 #| echo: false
 #| message: false
 pres_plot <- show_president(df, "Franklin D. Roosevelt")
 logo_plot <- show_logo_png(df, "Franklin D. Roosevelt")
+
+(pres_plot | logo_plot)
+```
+
+```{r}
+plot_president(df, "Donald J. Trump")
+pres_plot <- show_president(df, "Donald J. Trump")
+logo_plot <- show_logo_png(df, "Donald J. Trump")
 
 (pres_plot | logo_plot)
 ```

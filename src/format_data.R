@@ -1,4 +1,4 @@
-## --------------------------------------------------------------------------------------------------------------------------------------
+## ---------------------------------------------------------------------------------------------------------
 # setup
 library(here)
 library(tidyverse)
@@ -9,7 +9,7 @@ values <- c("POWER", "ACHIEVEMENT", "HEDONISM",
             "SECURITY")
 
 
-## --------------------------------------------------------------------------------------------------------------------------------------
+## ---------------------------------------------------------------------------------------------------------
 # import data and initial format
 speech_df <- readRDS(here("_data", "_primary_data", "speech_df.RDS")) |> 
   rename(item_ID = id, president_party = party) |>
@@ -20,11 +20,17 @@ speech_df <- readRDS(here("_data", "_primary_data", "speech_df.RDS")) |>
 
 participant_df <- readRDS(here("_data", "_participant_scores", "wave_2", "wave_2_dfs.RDS")) |> 
   bind_rows() |> 
+  
+  # remove attention check rows
   filter(! item_ID == "attention") |>
+  
+  # select relevant variables
   select(item_ID, participant_ID, all_of(values), 
          c, w, Ethnicity, `Political spectrum (us)`) |>
+  
   rename(confidence = c, percieved_party = w, 
          participant_party = `Political spectrum (us)`) |>
+  
   mutate(confidence = factor(confidence, 
      levels = c(
         "Completely Unconfident",
@@ -41,7 +47,7 @@ participant_df <- readRDS(here("_data", "_participant_scores", "wave_2", "wave_2
       ordered = TRUE))
 
 
-## --------------------------------------------------------------------------------------------------------------------------------------
+## ---------------------------------------------------------------------------------------------------------
 # merge data
 df <- participant_df %>%
   left_join(speech_df, by = "item_ID")
@@ -49,11 +55,11 @@ df <- participant_df %>%
 rm(participant_df, speech_df)
 
 
-## --------------------------------------------------------------------------------------------------------------------------------------
+## ---------------------------------------------------------------------------------------------------------
 # pivot data
 df <- df |> pivot_longer(cols = all_of(values), values_to = "rating", names_to = "value")
 
 
-## --------------------------------------------------------------------------------------------------------------------------------------
+## ---------------------------------------------------------------------------------------------------------
 #knitr::purl("format_data.rmd", output = here("src", "format_data.R"))
 
