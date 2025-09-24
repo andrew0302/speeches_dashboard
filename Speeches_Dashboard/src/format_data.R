@@ -1,8 +1,4 @@
----
-author: Andrew M. Demetriou
----
-
-```{r}
+## ---------------------------------------------------------------------------------------------------------
 # setup
 library(here)
 library(tidyverse)
@@ -11,9 +7,9 @@ values <- c("POWER", "ACHIEVEMENT", "HEDONISM",
             "STIMULATION", "SELF", "UNIVERSALISM", 
             "BENEVOLENCE", "TRADITION", "CONFORMITY", 
             "SECURITY")
-```
 
-```{r}
+
+## ---------------------------------------------------------------------------------------------------------
 # import data and initial format
 speech_df <- readRDS(here("_data", "_primary_data", "speech_df.RDS")) |> 
   rename(item_ID = id, president_party = party) |>
@@ -49,24 +45,21 @@ participant_df <- readRDS(here("_data", "_participant_scores", "wave_2", "wave_2
         "Confident (Low)",
         "Confident (High)"),
       ordered = TRUE))
-```
 
-```{r}
+
+## ---------------------------------------------------------------------------------------------------------
 # merge data
 df <- participant_df %>%
   left_join(speech_df, by = "item_ID")
 
 rm(participant_df, speech_df)
-```
 
-```{r}
+
+## ---------------------------------------------------------------------------------------------------------
 # pivot data
 df <- df |> pivot_longer(cols = all_of(values), values_to = "rating", names_to = "value")
-```
 
 
-
-```{r}
+## ---------------------------------------------------------------------------------------------------------
 #knitr::purl("format_data.rmd", output = here("src", "format_data.R"))
-```
 

@@ -65,7 +65,6 @@ df <- df |> pivot_longer(cols = all_of(values), values_to = "rating", names_to =
 ```
 
 
-
 ```{r}
 #knitr::purl("format_data.rmd", output = here("src", "format_data.R"))
 ```

@@ -7,6 +7,7 @@ library(ggrepel)
 
 # load and process data
 
+#source(here("Speeches_Dashboard", "src", "format_data.R"))
 source(here("src", "format_data.R"))
 
 # images paths for presidents
