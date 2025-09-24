@@ -55,7 +55,7 @@ ui <- fluidPage(
         "Portrait and Party Logo from Wikimedia Commons", "(CC-BY-SA/Public Domain)", tags$br(), 
         "Code licensed under the GNU GPL v3. ", tags$br(), 
         "Data from an academic study by Andrew M. Demetriou, licensed under ",
-        tags$a(href="https://creativecommons.org/licenses/by/4.0/", "CC-BY 4.0")
+        tags$a(href="https://creativecommons.org/licenses/by-nc/4.0/deed.en", "CC BY-NC 4.0")
       ),
       uiOutput("party_logo")
     ),
